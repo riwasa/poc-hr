@@ -1,3 +1,4 @@
+azure-ai-textanalytics
 azure-identity
 azure-search-documents
 openai
