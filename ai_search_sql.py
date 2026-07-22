@@ -10,15 +10,15 @@ load_dotenv()
 
 # Set up the client
 endpoint = os.getenv("AI_SEARCH_ENDPOINT")
-index_name = 'rag-1784735356357' #os.getenv("AI_SEARCH_INDEX_NAME")
+index_name = os.getenv("SQL_AI_SEARCH_INDEX_NAME")
 credential = DefaultAzureCredential()
 
 client = SearchClient(endpoint=endpoint, index_name=index_name, credential=credential)
 
 # Query text used for both vector and keyword search
 query_text = "what management postings are there?"
-location_id_raw = os.getenv("AI_SEARCH_LOCATION_ID", "1")
-location_id = int(location_id_raw) if location_id_raw else None
+location_id = 1
+
 # Create query_vector from a Microsoft Foundry embedding deployment.
 foundry_endpoint = os.getenv("AI_SEARCH_FOUNDRY_ENDPOINT")
 embedding_deployment = os.getenv("AI_SEARCH_FOUNDRY_EMBEDDING_DEPLOYMENT")
@@ -30,23 +30,15 @@ if not foundry_endpoint or not embedding_deployment:
     )
 
 # Prefer API key if provided; otherwise use Entra ID token auth.
-api_key = os.getenv("AZURE_OPENAI_API_KEY")
-if api_key:
-    embedding_client = AzureOpenAI(
-        azure_endpoint=foundry_endpoint,
-        api_key=api_key,
-        api_version="2024-06-01",
-    )
-else:
-    token_provider = get_bearer_token_provider(
-        credential,
-        "https://cognitiveservices.azure.com/.default",
-    )
-    embedding_client = AzureOpenAI(
-        azure_endpoint=foundry_endpoint,
-        azure_ad_token_provider=token_provider,
-        api_version="2024-06-01",
-    )
+token_provider = get_bearer_token_provider(
+    credential,
+    "https://cognitiveservices.azure.com/.default",
+)
+embedding_client = AzureOpenAI(
+    azure_endpoint=foundry_endpoint,
+    azure_ad_token_provider=token_provider,
+    api_version="2024-06-01",
+)
 
 embedding_response = embedding_client.embeddings.create(
     model=embedding_deployment,
@@ -58,7 +50,7 @@ query_vector = embedding_response.data[0].embedding
 vector_query = VectorizedQuery(
     vector=query_vector,
     k_nearest_neighbors=10,
-    fields="content_embedding",
+    fields="text_vector",
     exhaustive=True
 )
 
